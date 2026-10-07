@@ -11,7 +11,7 @@
 
 > *Students open AI tools to study… and 20 minutes later they're discussing cricket scores, movies, or random gossip.*
 
-This project introduces a **strictly academic AI agent** that never engages in small talk, refuses off-topic discussions, and anchors its answers to the student's **uploaded coursework and syllabus**.  
+This project introduces a **strictly academic AI agent** that never engages in small talk, refuses off-topic discussions, and anchors its answers to the student's **uploaded coursework and syllabus**.
 
 It runs **client-side in the browser**, extracts and chunks documents locally using an **in-browser Local RAG system**, and keeps study sessions private, disciplined, and focused.
 
@@ -50,7 +50,7 @@ During our academic research, we identified three critical friction points in ex
 | **Framework & UI** | React 18, TypeScript (TSX), Vite 6 |
 | **Styling & Icons** | Tailwind CSS, Lucide React |
 | **AI Engine** | Google Gemini (Gemini 2.5 Flash / Flash Latest) |
-| **Document Processing** | PDF.js (`pdfjs-dist`), Marked.js |
+| **Document Processing** | PDF.js (pdfjs-dist), Marked.js |
 | **Diagrams & Visuals** | Mermaid.js |
 | **Audio & Voice** | Web Audio API, Web Speech API |
 | **Deployment** | Vercel |
@@ -85,7 +85,8 @@ VITE_GEMINI_API_KEY=your_gemini_api_key_here
 ```bash
 npm run dev
 ```
-Open [http://localhost:5173](http://localhost:5173) in your browser.
+
+Open [http://localhost:5173](http://localhost:5173).
 
 ### 6. Build for Production
 ```bash
@@ -109,5 +110,5 @@ Make sure to set the `VITE_GEMINI_API_KEY` environment variable in your Vercel P
 ## 👥 Authors & Credits
 
 - **Mohit Tanwar** ([@Mohit-Tanwar25](https://github.com/Mohit-Tanwar25))
-- **Lakshay**
+- **Lakshay Sharma** ([@Lakshayy2406](https://github.com/Lakshayy2406))
 - Showcase at **IDENTITY 2025**, *Dezyne École College* (in collaboration with *Sentry*).
