@@ -1,114 +1,191 @@
-# 🌟 Professor’s Assistant – AI-Driven Academic Focus Tool  
-*A distraction-free, context-aware learning assistant built for students.*  
-**Final Showcase Project – IDENTITY 2025, Dezyne École College (in collaboration with Sentry)**  
-*Built with ❤️ by Team Mohit & Lakshay*
+# 🎓 Professor's Assistant
+
+> **An AI-powered academic assistant designed to keep students focused, organized, and strictly on-topic.**
+
+Professor's Assistant is a modern web-based study companion built for students who want the power of AI without the distraction that usually comes with it.
+
+Unlike general-purpose AI chatbots, Professor's Assistant is designed around an **academic-first workflow**. It helps students study from their own course material, understand concepts, create revision resources, manage study sessions, and stay focused.
 
 ---
 
-## 🚀 Overview
+## 🚀 Features
 
-**Professor’s Assistant** is a modern, high-performance academic companion built to solve one of the most widespread challenges students face:
+### 🛡 Strict Academic Assistant
+Keeps conversations focused on education and study-related topics instead of casual or irrelevant discussions.
 
-> *Students open AI tools to study… and 20 minutes later they're discussing cricket scores, movies, or random gossip.*
+### 📚 Local Document RAG
+Upload study material and use it as context for AI-powered questions and answers. Document processing is handled in the browser to support a more private study workflow.
 
-This project introduces a **strictly academic AI agent** that never engages in small talk, refuses off-topic discussions, and anchors its answers to the student's **uploaded coursework and syllabus**.
+### 🧠 AI Concept Maps
+Generate visual concept maps from study material to understand relationships between topics more easily.
 
-It runs **client-side in the browser**, extracts and chunks documents locally using an **in-browser Local RAG system**, and keeps study sessions private, disciplined, and focused.
+### 🃏 AI Flashcards
+Create revision-oriented flashcards for faster recall and exam preparation.
 
----
+### ⏱ Focus Timer
+Built-in Pomodoro-style focus sessions with configurable study and break intervals.
 
-## 🎯 Why We Built It
+### 🎤 Voice Input
+Use speech recognition to ask questions without typing.
 
-During our academic research, we identified three critical friction points in existing AI study workflows:
+### 📝 Quick Notes
+Maintain an in-app scratchpad for formulas, ideas, definitions, and important points.
 
-1. **❗ Conversation Drift** – Mainstream AI chatbots easily drift into off-topic entertainment, pop culture, and casual chats.
-2. **❗ Momentum Loss** – Even brief conversational tangents disrupt deep focus and flow state.
-3. **❗ Lack of Course Context** – Generic AI models lack specific knowledge of a class's syllabus, lecture notes, and study guides.
+### 📅 Academic Schedule
+Track lectures, assignments, exams, and other important academic events.
 
-**Professor’s Assistant** solves these problems with a strict academic system prompt protocol and client-side document retrieval.
+### 💬 Conversation History
+Save and revisit previous study conversations.
 
----
-
-## ✨ Key Features
-
-- 🛡 **Strict Academic Mode (Zero Small Talk)** – Refuses non-educational queries and immediately redirects students back to studying.
-- 🎯 **Local In-Browser RAG** – Extracts text from course PDFs, TXT, MD, CSV, and JSON files without sending entire documents to external servers.
-- 📚 **AI Concept Maps (Mermaid.js)** – Automatically generates reactive visual flowcharts and knowledge maps from uploaded materials.
-- 🗂 **Interactive 3D Flashcards** – Generates high-yield study flashcards with flip animations and carousel controls.
-- ⏱ **Focus Pomodoro Timer** – Features presets (25m Focus, 5m Short Break, 15m Long Break), manual time edits, and Web Audio synthesis alert chimes.
-- 📅 **Academic Schedule Tracker** – Track lectures, assignments, and exam deadlines with date badges and local persistence.
-- 🎙 **Voice Typing (Speech-to-Text)** – Seamless hands-free study queries via the Web Speech API.
-- 📝 **Auto-Saving Scratchpad** – Instant quick notes and formula pad that persist automatically.
-- 💬 **Conversation History** – Save, restore, and clear past academic chat sessions.
+### 📱 Responsive Interface
+Designed to provide a smooth experience across desktop and mobile screens.
 
 ---
 
-## ⚙ Tech Stack
+## 🛠 Tech Stack
 
-| Layer | Technologies |
+| Category | Technologies |
 |---|---|
-| **Framework & UI** | React 18, TypeScript (TSX), Vite 6 |
-| **Styling & Icons** | Tailwind CSS, Lucide React |
-| **AI Engine** | Google Gemini (Gemini 2.5 Flash / Flash Latest) |
-| **Document Processing** | PDF.js (pdfjs-dist), Marked.js |
-| **Diagrams & Visuals** | Mermaid.js |
-| **Audio & Voice** | Web Audio API, Web Speech API |
-| **Deployment** | Vercel |
+| Frontend | React 18, TypeScript |
+| Build Tool | Vite |
+| Styling | Tailwind CSS |
+| Icons | Lucide React |
+| AI | Google Gemini API |
+| Document Processing | PDF.js |
+| Markdown | Marked.js |
+| Visualizations | Mermaid.js |
+| Voice | Web Speech API |
+| Audio | Web Audio API |
 
 ---
 
-## 🛠 Getting Started & Local Development
+## 🏗 Project Structure
 
-### 1. Prerequisites
-- **Node.js** (v18 or higher recommended)
-- **npm** or **yarn** / **pnpm**
-- A **Google Gemini API Key** (Free from [Google AI Studio](https://aistudio.google.com/app/apikey))
+```text
+Professor-s-Assistant/
+│
+├── src/
+│   ├── components/
+│   │   ├── Chat/
+│   │   ├── Common/
+│   │   ├── Modals/
+│   │   ├── Schedule/
+│   │   ├── Sidebar/
+│   │   └── StudyTools/
+│   │
+│   ├── context/
+│   ├── hooks/
+│   ├── services/
+│   ├── types/
+│   ├── App.tsx
+│   ├── index.css
+│   └── main.tsx
+│
+├── index.html
+├── package.json
+├── package-lock.json
+├── tailwind.config.js
+├── postcss.config.js
+├── tsconfig.json
+└── vite.config.ts
+```
 
-### 2. Clone the Repository
+---
+
+## ⚙️ Getting Started
+
+### 1. Clone the repository
+
 ```bash
-git clone https://github.com/Mohit-Tanwar25/Professor-s-Assistant.git
+git clone https://github.com/Lakshayy2406/Professor-s-Assistant.git
 cd Professor-s-Assistant
 ```
 
-### 3. Install Dependencies
+### 2. Install dependencies
+
 ```bash
 npm install
 ```
 
-### 4. Configure Environment Variables
-Create a `.env` file in the root directory (refer to `.env.example`):
+### 3. Configure the Gemini API
+
+Create a `.env` file in the project root:
+
 ```env
-VITE_GEMINI_API_KEY=your_gemini_api_key_here
+VITE_GEMINI_API_KEY=your_gemini_api_key
 ```
 
-### 5. Start the Development Server
+You can use `.env.example` as the reference configuration.
+
+> **Never commit your real API key to GitHub.**
+
+### 4. Run the development server
+
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173).
+Open the local Vite URL shown in the terminal.
 
-### 6. Build for Production
+### 5. Build for production
+
 ```bash
 npm run build
 ```
 
----
-
-## 🌐 Deploy to Vercel
-
-You can deploy this project to Vercel with a single click or command:
+### 6. Preview the production build
 
 ```bash
-npx vercel
+npm run preview
 ```
-
-Make sure to set the `VITE_GEMINI_API_KEY` environment variable in your Vercel Project Settings!
 
 ---
 
-## 👥 Authors & Credits
+## 🎯 Use Cases
 
-- **Mohit Tanwar** ([@Mohit-Tanwar25](https://github.com/Mohit-Tanwar25))
-- **Lakshay Sharma** ([@Lakshayy2406](https://github.com/Lakshayy2406))
-- Showcase at **IDENTITY 2025**, *Dezyne École College* (in collaboration with *Sentry*).
+Professor's Assistant can be used for:
+
+- Exam preparation
+- Course-material based Q&A
+- Concept revision
+- Flashcard-based learning
+- Visual topic exploration
+- Focused study sessions
+- Lecture and assignment planning
+- Quick academic note-taking
+
+---
+
+## 🔒 Privacy & Security
+
+The application is designed around a client-side study workflow and local document processing.
+
+However, **API credentials still need to be handled securely**. Never expose a private or production API key in a public repository.
+
+---
+
+## 📸 Project Highlights
+
+The application combines several study workflows into one interface:
+
+**Study Material → Ask Questions → Understand Concepts → Create Flashcards → Focus Session → Review**
+
+This makes it more than a simple AI chatbot; it acts as a dedicated academic workspace.
+
+---
+
+## 👨‍💻 Authors
+
+**Lakshay Sharma**  
+GitHub: [@Lakshayy2406](https://github.com/Lakshayy2406)
+
+**Mohit Tanwar**  
+GitHub: [@Mohit-Tanwar25](https://github.com/Mohit-Tanwar25)
+
+---
+
+## ⭐ Project
+
+Built as an academic AI project focused on improving student productivity, learning, and study discipline.
+
+If you find the project useful, consider giving the repository a ⭐.
