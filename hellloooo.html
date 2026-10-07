@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Strict AI Study Assistant</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    animation: {
+                        'flip': 'flip 0.6s forwards',
+                        'slide-in': 'slideIn 0.3s ease-out forwards',
+                        'fade-out': 'fadeOut 0.3s ease-in forwards',
+                        'scale-in': 'scaleIn 0.2s ease-out forwards'
+                    },
+                    keyframes: {
+                        slideIn: {
+                            '0%': { transform: 'translateX(100%)', opacity: '0' },
+                            '100%': { transform: 'translateX(0)', opacity: '1' },
+                        },
+                        fadeOut: {
+                            '0%': { opacity: '1' },
+                            '100%': { opacity: '0' },
+                        },
+                        scaleIn: {
+                            '0%': { transform: 'scale(0.95)', opacity: '0' },
+                            '100%': { transform: 'scale(1)', opacity: '1' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- PDF.js (v2.16 for better local file compatibility) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    
+    <!-- Mermaid.js for Concept Maps -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+    
+    <!-- Marked.js for Markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .typing-dot { animation: typing 1.4s infinite ease-in-out both; }
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes typing { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+
+        .fade-in { animation: fadeIn 0.3s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Flashcard Styles */
+        .perspective-1000 { perspective: 1000px; }
+        .transform-style-3d { transform-style: preserve-3d; }
+        .backface-hidden { backface-visibility: hidden; }
+        .rotate-y-180 { transform: rotateY(180deg); }
+    </style>
+</head>
+<body class="bg-slate-100 h-screen overflow-hidden flex text-slate-800">
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Custom Confirm Modal -->
+    <div id="custom-confirm-modal" class="hidden fixed inset-0 z-[110] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 fade-in">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 transform animate-scale-in border border-slate-200">
+            <div class="mb-4">
+                <div class="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center mb-3 text-blue-600 mx-auto">
+                    <i class="fa-solid fa-question text-xl"></i>
+                </div>
+                <h3 class="text-lg font-bold text-slate-800 text-center mb-1">Confirmation</h3>
+                <p id="confirm-message" class="text-slate-500 text-center text-sm">Are you sure you want to proceed?</p>
+            </div>
+            <div class="flex gap-3">
+                <button id="confirm-cancel-btn" class="flex-1 py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-sm font-medium transition-colors">Cancel</button>
+                <button id="confirm-ok-btn" class="flex-1 py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium transition-colors">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Modal -->
+    <div id="history-modal" class="hidden fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 fade-in">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md h-[80vh] flex flex-col overflow-hidden border border-slate-200 transform animate-scale-in">
+            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <h3 class="font-bold text-slate-700 flex items-center gap-2">
+                    <i class="fa-solid fa-clock-rotate-left text-blue-500"></i> Chat History
+                </h3>
+                <button onclick="closeHistoryModal()" class="text-slate-400 hover:text-slate-600 w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            
+            <div id="history-list" class="flex-1 overflow-y-auto p-4 space-y-2">
+                <!-- History items will be injected here via JS -->
+                <div class="text-center text-slate-400 mt-10 text-sm">No history found.</div>
+            </div>
+
+            <div class="p-4 border-t border-slate-100 bg-slate-50">
+                <button onclick="clearChatHistory()" class="w-full py-2 text-xs text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100 font-medium">
+                    Clear All History
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SIDEBAR -->
+    <aside class="w-80 bg-slate-900 text-slate-100 flex flex-col shadow-xl z-20 transition-all duration-300 absolute md:relative h-full" id="sidebar">
+        <!-- Header -->
+        <div class="p-6 border-b border-slate-700 bg-slate-900 z-10">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-900/50">
+                    <i class="fa-solid fa-robot text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg tracking-tight">Professor's Assistant</h1>
+                    <p class="text-xs text-slate-400">Strict Academic Mode</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Nav -->
+        <div class="px-4 pt-4 pb-2 flex flex-col gap-2">
+            <div class="flex gap-2">
+                <button onclick="switchTab('chat')" id="nav-chat" class="flex-1 py-2 px-3 rounded-lg bg-blue-600 text-white text-sm font-medium transition-all flex items-center justify-center gap-2 border border-transparent hover:brightness-110">
+                    <i class="fa-solid fa-message"></i> Chat
+                </button>
+                <button onclick="switchTab('schedule')" id="nav-schedule" class="flex-1 py-2 px-3 rounded-lg bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 text-sm font-medium transition-all flex items-center justify-center gap-2 border border-transparent">
+                    <i class="fa-solid fa-calendar-days"></i> Schedule
+                </button>
+            </div>
+            <button onclick="switchTab('tools')" id="nav-tools" class="w-full py-2 px-3 rounded-lg bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 text-sm font-medium transition-all flex items-center justify-center gap-2 border border-transparent">
+                <i class="fa-solid fa-shapes"></i> Study Tools
+            </button>
+        </div>
+
+        <!-- Upload Area -->
+        <div id="sidebar-upload-section" class="p-6">
+            <div id="drop-zone" class="border-2 border-dashed border-slate-600 rounded-xl p-6 text-center hover:border-blue-500 hover:bg-slate-800 transition-all cursor-pointer group relative bg-slate-800/30">
+                <input type="file" id="file-input" multiple accept=".pdf,.txt,.md,.json,.csv" class="hidden">
+                
+                <div id="upload-spinner" class="hidden absolute inset-0 bg-slate-900/90 items-center justify-center rounded-xl z-20 flex-col gap-2">
+                    <i class="fa-solid fa-circle-notch fa-spin text-2xl text-blue-400"></i>
+                    <span class="text-xs font-medium text-blue-300">Processing...</span>
+                </div>
+
+                <div class="w-12 h-12 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:bg-blue-600 group-hover:text-white transition-all text-blue-400 shadow-lg">
+                    <i class="fa-solid fa-cloud-arrow-up text-xl"></i>
+                </div>
+                <p class="text-sm font-medium text-slate-300">Click to upload files</p>
+                <p class="text-[10px] text-slate-500 mt-1 uppercase tracking-wide">PDF, TXT, MD, CSV</p>
+            </div>
+        </div>
+
+        <!-- File List -->
+        <div id="sidebar-file-list" class="flex-1 overflow-y-auto px-4 pb-4">
+            <div class="flex justify-between items-end mb-2 px-1">
+                <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Knowledge Base</h3>
+                <span id="doc-count" class="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400">0 Files</span>
+            </div>
+            <div id="file-list" class="space-y-2">
+                <div class="text-center text-slate-600 py-8 text-sm italic" id="empty-state">
+                    No files uploaded yet.
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer / Status -->
+        <div class="p-4 bg-slate-800 border-t border-slate-700">
+            <button id="delete-all-btn" class="w-full mb-3 py-2 bg-slate-700 hover:bg-red-900/30 text-slate-400 hover:text-red-400 border border-slate-600 hover:border-red-900/50 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-2">
+                <i class="fa-solid fa-dumpster"></i> Clear All Files
+            </button>
+
+            <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2 text-xs">
+                    <div id="status-dot" class="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></div>
+                    <span id="system-status" class="text-slate-400 truncate max-w-[120px]">Initializing...</span>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="flex-1 flex flex-col h-full w-full relative overflow-hidden">
+        <!-- Mobile Header -->
+        <div class="md:hidden h-16 bg-white border-b border-slate-200 flex items-center px-4 justify-between flex-shrink-0 z-10">
+            <span class="font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-robot text-blue-600"></i> DocuMind</span>
+            <button id="toggle-sidebar" class="text-slate-600 p-2"><i class="fa-solid fa-bars text-xl"></i></button>
+        </div>
+
+        <!-- Map Fullscreen Modal -->
+        <div id="map-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center p-4 fade-in">
+            <div class="w-full max-w-6xl h-[85vh] bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col relative">
+                <button onclick="closeMapModal()" class="absolute top-4 right-4 z-10 bg-white/90 hover:bg-white text-slate-600 hover:text-red-500 p-2 rounded-full shadow-md transition-colors">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+                <div id="map-modal-content" class="flex-1 overflow-auto flex items-center justify-center bg-slate-5 p-8">
+                    <!-- Map clone goes here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW: CHAT -->
+        <div id="view-chat" class="flex-1 flex flex-col h-full overflow-hidden relative">
+            
+            <!-- Chat Header -->
+            <div class="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 flex-shrink-0 z-10">
+                <h2 class="font-bold text-slate-700 text-sm flex items-center gap-2"><i class="fa-regular fa-comments text-blue-500"></i> Conversation</h2>
+                
+                <div class="flex gap-2">
+                    <button onclick="openHistoryModal()" class="text-xs bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-800 border border-slate-200 hover:border-slate-300 px-3 py-1.5 rounded-lg transition-all flex items-center gap-2 shadow-sm">
+                        <i class="fa-solid fa-clock-rotate-left"></i> History
+                    </button>
+                    <button onclick="startNewChat()" class="text-xs bg-slate-50 hover:bg-blue-50 text-slate-600 hover:text-blue-600 border border-slate-200 hover:border-blue-200 px-3 py-1.5 rounded-lg transition-all flex items-center gap-2 shadow-sm group">
+                        <i class="fa-solid fa-plus group-hover:rotate-90 transition-transform"></i> New Chat
+                    </button>
+                </div>
+            </div>
+
+            <div id="chat-container" class="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 scroll-smooth bg-slate-50/50">
+                <!-- Welcome -->
+                <div class="flex gap-4 max-w-3xl mx-auto">
+                    <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 text-blue-600 shadow-sm border border-blue-200">
+                        <i class="fa-solid fa-robot text-sm"></i>
+                    </div>
+                    <div class="bg-white border border-slate-200 p-4 rounded-2xl rounded-tl-none shadow-sm text-slate-700 text-sm leading-relaxed">
+                        Hello. I am your <b>Strict Study Assistant</b>. <br><br>
+                        I am designed to provide study materials, notes, and educational explanations ONLY. I do not engage in casual conversation, greetings, or off-topic discussions. 
+                        <br><br>
+                        <span class="text-xs text-slate-400"><i class="fa-solid fa-circle-info"></i> Please upload your course documents to begin studying.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input -->
+            <div class="bg-white p-4 border-t border-slate-200">
+                <div class="max-w-3xl mx-auto">
+                    <div class="flex gap-2 mb-3 overflow-x-auto pb-1 no-scrollbar">
+                        <button onclick="triggerQuiz()" class="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-full text-xs font-semibold border border-indigo-100 hover:bg-indigo-100 transition-colors whitespace-nowrap">
+                            <i class="fa-solid fa-graduation-cap"></i> Quiz Me
+                        </button>
+                        <button onclick="triggerSuggest()" class="flex items-center gap-2 px-3 py-1.5 bg-purple-50 text-purple-600 rounded-full text-xs font-semibold border border-purple-100 hover:bg-purple-100 transition-colors whitespace-nowrap">
+                            <i class="fa-regular fa-lightbulb"></i> Suggest Questions
+                        </button>
+                    </div>
+                    <form id="chat-form" class="relative">
+                        <input type="text" id="user-input" class="w-full bg-slate-50 border border-slate-300 text-slate-800 text-sm rounded-xl focus:ring-2 focus:ring-blue-500 block p-4 pr-24 shadow-sm outline-none transition-all" placeholder="Ask for notes, summaries, or study help..." required autocomplete="off">
+                        <div class="absolute right-2 top-2 bottom-2 flex gap-1">
+                            <button type="button" id="mic-btn" class="bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-700 rounded-lg px-3 transition-colors" title="Voice Typing">
+                                <i class="fa-solid fa-microphone"></i>
+                            </button>
+                            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 transition-colors"><i class="fa-solid fa-paper-plane"></i></button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW: SCHEDULE -->
+        <div id="view-schedule" class="hidden flex-1 flex-col h-full overflow-y-auto p-4 md:p-8 fade-in bg-slate-50">
+            <div class="max-w-5xl mx-auto w-full">
+                <div class="flex items-center justify-between mb-8">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800">Schedule</h2>
+                        <p class="text-slate-500 text-sm">Track your academic deadlines.</p>
+                    </div>
+                    <div class="bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-200 text-sm text-slate-600 font-medium">
+                        <i class="fa-regular fa-calendar text-blue-600 mr-2"></i> <span id="current-date"></span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-1">
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 sticky top-8">
+                            <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2"><i class="fa-solid fa-plus-circle text-blue-600"></i> Add Event</h3>
+                            <form id="schedule-form" class="space-y-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Title</label>
+                                    <input type="text" id="event-title" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Date</label>
+                                    <input type="date" id="event-date" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Type</label>
+                                    <select id="event-type" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                                        <option value="Lecture">Lecture</option>
+                                        <option value="Assignment">Assignment</option>
+                                        <option value="Exam">Exam</option>
+                                    </select>
+                                </div>
+                                <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium py-2.5 rounded-lg transition-colors mt-2">Add Event</button>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-2 space-y-4" id="events-container">
+                        <div id="no-events" class="text-center py-12 bg-white rounded-2xl border border-slate-200 border-dashed">
+                            <i class="fa-regular fa-calendar-xmark text-3xl text-slate-300 mb-3 block"></i>
+                            <p class="text-slate-500 font-medium">No events scheduled.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW: STUDY TOOLS -->
+        <div id="view-tools" class="hidden flex-1 flex-col h-full overflow-y-auto p-4 md:p-8 fade-in bg-slate-50">
+            <div class="max-w-5xl mx-auto w-full space-y-8">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800">Study Tools</h2>
+                        <p class="text-slate-500 text-sm">Boost your productivity and retention.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Flashcards -->
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col h-[500px]">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-bold text-slate-700 flex items-center gap-2"><i class="fa-solid fa-layer-group text-blue-600"></i> AI Flashcards</h3>
+                            <button onclick="generateFlashcards()" id="gen-flash-btn" class="text-xs bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 py-1.5 rounded-lg transition-colors font-medium">Generate from Files</button>
+                        </div>
+                        
+                        <div id="flashcard-container" class="flex-1 relative perspective-1000 w-full h-full flex items-center justify-center bg-slate-50 rounded-xl border-2 border-dashed border-slate-200 overflow-hidden">
+                            <div class="text-center text-slate-400 p-4">
+                                <i class="fa-solid fa-cards-blank text-4xl mb-2 block"></i>
+                                Upload files and click "Generate"
+                            </div>
+                        </div>
+                        
+                        <div id="flashcard-controls" class="hidden mt-4 flex justify-center gap-4 items-center">
+                            <button onclick="prevCard()" class="p-2 text-slate-400 hover:text-blue-600 transition-colors"><i class="fa-solid fa-chevron-left text-xl"></i></button>
+                            <span id="card-counter" class="text-sm font-medium text-slate-600">1 / 5</span>
+                            <button onclick="nextCard()" class="p-2 text-slate-400 hover:text-blue-600 transition-colors"><i class="fa-solid fa-chevron-right text-xl"></i></button>
+                        </div>
+                    </div>
+
+                    <!-- Focus Timer -->
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-[500px] flex flex-col">
+                        <h3 class="font-bold text-slate-700 flex items-center gap-2 mb-6"><i class="fa-solid fa-stopwatch text-red-500"></i> Focus Timer</h3>
+                        
+                        <div class="flex flex-col items-center justify-center py-4 flex-1">
+                            <div class="flex items-center justify-center gap-4 mb-8 group">
+                                <button onclick="adjustTime(-60)" class="text-slate-300 hover:text-slate-600 p-2 rounded-full transition-colors" title="Decrease 1 min"><i class="fa-solid fa-minus"></i></button>
+                                <div id="timer-display" class="text-5xl sm:text-6xl font-mono font-bold text-slate-800 tracking-wider cursor-pointer select-none hover:text-blue-600 transition-colors" onclick="editTimer()" title="Click to type time (e.g., 01:30:00)">00:25:00</div>
+                                <input type="text" id="manual-timer-input" class="hidden text-5xl sm:text-6xl font-mono font-bold text-slate-800 text-center w-[12ch] bg-transparent border-b-2 border-blue-500 outline-none tracking-wider" onblur="saveManualTime()" onkeydown="if(event.key==='Enter') this.blur()">
+                                <button onclick="adjustTime(60)" class="text-slate-300 hover:text-slate-600 p-2 rounded-full transition-colors" title="Increase 1 min"><i class="fa-solid fa-plus"></i></button>
+                            </div>
+                            
+                            <div class="flex gap-3 w-full max-w-xs mb-6">
+                                <button onclick="startTimer()" id="start-btn" class="flex-1 bg-slate-900 hover:bg-slate-800 text-white py-3 rounded-xl font-medium transition-colors">Start</button>
+                                <button onclick="resetTimer()" class="px-4 border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl transition-colors"><i class="fa-solid fa-rotate-right"></i></button>
+                            </div>
+
+                            <div class="flex gap-2 bg-slate-100 p-1 rounded-lg">
+                                <button onclick="setTimerMode('focus')" id="mode-focus" class="px-4 py-1.5 rounded-md text-sm font-medium bg-white text-slate-800 shadow-sm transition-all">Focus</button>
+                                <button onclick="setTimerMode('short')" id="mode-short" class="px-4 py-1.5 rounded-md text-sm font-medium text-slate-500 hover:text-slate-700 transition-all">Short Break</button>
+                                <button onclick="setTimerMode('long')" id="mode-long" class="px-4 py-1.5 rounded-md text-sm font-medium text-slate-500 hover:text-slate-700 transition-all">Long Break</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Concept Map -->
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col h-[500px] relative group">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-bold text-slate-700 flex items-center gap-2"><i class="fa-solid fa-project-diagram text-purple-600"></i> AI Concept Map</h3>
+                            <button onclick="generateMindMap()" id="gen-map-btn" class="text-xs bg-purple-50 hover:bg-purple-100 text-purple-600 px-3 py-1.5 rounded-lg transition-colors font-medium">Generate</button>
+                        </div>
+                        
+                        <!-- Container for map and zoom controls -->
+                        <div class="relative flex-1 w-full h-full overflow-hidden bg-white rounded-xl border-2 border-dashed border-slate-200">
+                            <div id="mindmap-container" class="w-full h-full overflow-auto flex items-center justify-center p-4">
+                                <div id="mindmap-content" class="transition-transform duration-200 ease-out origin-center cursor-zoom-in" onclick="openMapInNewTab()" title="Click to open in new tab">
+                                    <div class="text-center text-slate-400 mt-10">
+                                        <i class="fa-solid fa-bezier-curve text-4xl mb-2 block"></i>
+                                        Visualize relationships
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Zoom Controls -->
+                            <div class="absolute bottom-4 right-4 flex flex-col gap-2 bg-white/90 backdrop-blur-sm p-2 rounded-lg shadow-sm border border-slate-200 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button onclick="event.stopPropagation(); zoomMap(0.1)" class="w-8 h-8 flex items-center justify-center rounded hover:bg-slate-100 text-slate-600 transition-colors" title="Zoom In">
+                                    <i class="fa-solid fa-plus"></i>
+                                </button>
+                                <button onclick="event.stopPropagation(); resetZoomMap()" class="w-8 h-8 flex items-center justify-center rounded hover:bg-slate-100 text-slate-600 transition-colors" title="Reset Zoom">
+                                    <i class="fa-solid fa-compress"></i>
+                                </button>
+                                <button onclick="event.stopPropagation(); zoomMap(-0.1)" class="w-8 h-8 flex items-center justify-center rounded hover:bg-slate-100 text-slate-600 transition-colors" title="Zoom Out">
+                                    <i class="fa-solid fa-minus"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Notes -->
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col h-[500px]">
+                        <h3 class="font-bold text-slate-700 flex items-center gap-2 mb-4"><i class="fa-solid fa-note-sticky text-yellow-500"></i> Quick Notes</h3>
+                        <textarea id="quick-notes" class="flex-1 w-full bg-yellow-50 border-none resize-none p-4 rounded-xl text-sm text-slate-700 focus:ring-2 focus:ring-yellow-200 outline-none placeholder-yellow-300/50 leading-relaxed" placeholder="Type your study notes here..."></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- LOGIC -->
+    <script>
+        // --- CONFIG ---
+        const apiKey = "AIzaSyCWN7Uth7yRp8Ts_r1WPs6WFbzWgn9_Sjk"; // Enter your API Key here
+        const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent";
+        
+        // --- STATE ---
+        let contextData = "";
+        let filesStorage = {};
+        let fileCount = 0;
+        let isPdfLibReady = false;
+        let events = JSON.parse(localStorage.getItem("events") || "[]");
+        
+        // History State
+        let chatHistory = JSON.parse(localStorage.getItem('chatHistory') || "[]");
+        let currentSessionId = Date.now();
+        let currentSessionMessages = [];
+
+        // Tools State
+        let flashcards = [];
+        let currentCardIndex = 0;
+        let timerInterval;
+        let timeLeft = 25 * 60;
+        let isTimerRunning = false;
+        let mapZoomLevel = 1;
+
+        // --- DOM ---
+        const fileInput = document.getElementById('file-input');
+        const dropZone = document.getElementById('drop-zone');
+        const fileList = document.getElementById('file-list');
+        const chatContainer = document.getElementById('chat-container');
+        const chatForm = document.getElementById('chat-form');
+        const userInput = document.getElementById('user-input');
+        const emptyState = document.getElementById('empty-state');
+        const statusLabel = document.getElementById('system-status');
+        const statusDot = document.getElementById('status-dot');
+        const docCountLabel = document.getElementById('doc-count');
+        const uploadSpinner = document.getElementById('upload-spinner');
+        const deleteAllBtn = document.getElementById('delete-all-btn');
+
+        // --- TOAST & MODAL SYSTEM ---
+        const toastContainer = document.getElementById('toast-container');
+        const confirmModal = document.getElementById('custom-confirm-modal');
+        const confirmMessage = document.getElementById('confirm-message');
+        const confirmOk = document.getElementById('confirm-ok-btn');
+        const confirmCancel = document.getElementById('confirm-cancel-btn');
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            const colors = type === 'error' ? 'bg-red-500 text-white' : type === 'success' ? 'bg-green-500 text-white' : 'bg-slate-800 text-white';
+            const icon = type === 'error' ? 'fa-circle-exclamation' : type === 'success' ? 'fa-circle-check' : 'fa-circle-info';
+            
+            toast.className = `${colors} px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 text-sm font-medium min-w-[280px] transform animate-slide-in pointer-events-auto`;
+            toast.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${message}</span>`;
+            
+            toastContainer.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.replace('animate-slide-in', 'animate-fade-out');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function customConfirm(message) {
+            return new Promise((resolve) => {
+                confirmMessage.innerText = message;
+                confirmModal.classList.remove('hidden');
+                
+                const handleOk = () => {
+                    cleanup();
+                    resolve(true);
+                };
+                
+                const handleCancel = () => {
+                    cleanup();
+                    resolve(false);
+                };
+
+                const cleanup = () => {
+                    confirmModal.classList.add('hidden');
+                    confirmOk.removeEventListener('click', handleOk);
+                    confirmCancel.removeEventListener('click', handleCancel);
+                };
+
+                confirmOk.addEventListener('click', handleOk);
+                confirmCancel.addEventListener('click', handleCancel);
+            });
+        }
+
+        // --- INITIALIZATION ---
+        function initPdfWorker() {
+            if (window.pdfjsLib) {
+                pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
+                isPdfLibReady = true;
+                statusLabel.innerText = "System Ready";
+                statusDot.classList.replace('bg-yellow-500', 'bg-green-500');
+                statusDot.classList.remove('animate-pulse');
+            } else {
+                statusLabel.innerText = "PDF Lib Error";
+                statusDot.classList.replace('bg-yellow-500', 'bg-red-500');
+                showToast("PDF Engine failed to load.", "error");
+            }
+        }
+        setTimeout(initPdfWorker, 1000);
+
+        // Initialize Mermaid with a cleaner theme configuration
+        mermaid.initialize({ 
+            startOnLoad: false, 
+            theme: 'base',
+            themeVariables: {
+                primaryColor: '#eff6ff', // blue-50
+                primaryTextColor: '#1e293b', // slate-800
+                primaryBorderColor: '#3b82f6', // blue-500
+                lineColor: '#64748b', // slate-500
+                secondaryColor: '#f8fafc',
+                tertiaryColor: '#ffffff'
+            },
+            flowchart: { curve: 'linear' }
+        });
+
+        // --- VOICE TYPING ---
+        const micBtn = document.getElementById('mic-btn');
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        
+        if (SpeechRecognition) {
+            const recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.lang = 'en-US';
+            
+            micBtn.addEventListener('click', () => {
+                if (micBtn.classList.contains('listening')) {
+                    recognition.stop();
+                } else {
+                    recognition.start();
+                }
+            });
+            
+            recognition.onstart = () => {
+                micBtn.classList.add('listening', 'bg-red-100', 'text-red-600', 'animate-pulse');
+                micBtn.classList.remove('bg-slate-100', 'text-slate-500');
+            };
+            
+            recognition.onend = () => {
+                micBtn.classList.remove('listening', 'bg-red-100', 'text-red-600', 'animate-pulse');
+                micBtn.classList.add('bg-slate-100', 'text-slate-500');
+            };
+            
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                userInput.value = transcript;
+                userInput.focus();
+            };
+            
+            recognition.onerror = (event) => {
+                console.error("Speech recognition error", event.error);
+                micBtn.classList.remove('listening', 'bg-red-100', 'text-red-600', 'animate-pulse');
+                micBtn.classList.add('bg-slate-100', 'text-slate-500');
+                showToast("Voice input failed. Check permissions.", "error");
+            };
+        } else {
+            micBtn.style.display = 'none'; // Hide if not supported
+        }
+
+        // --- FILE HANDLING ---
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('border-blue-500', 'bg-slate-800'); });
+        dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('border-blue-500', 'bg-slate-800'); });
+        dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('border-blue-500', 'bg-slate-800'); handleFiles(e.dataTransfer.files); });
+        fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+        deleteAllBtn.addEventListener('click', async () => {
+            if (fileCount === 0) return showToast("No files to delete.", "error");
+            if(await customConfirm("Remove ALL files from knowledge base?")) {
+                filesStorage = {}; contextData = ""; fileCount = 0; docCountLabel.innerText = "0 Files";
+                fileList.innerHTML = `<div class="text-center text-slate-600 py-8 text-sm italic" id="empty-state">No files uploaded yet.</div>`;
+                addMessage('assistant', 'All files have been cleared.');
+                // Clear tools
+                flashcards = [];
+                document.getElementById('flashcard-container').innerHTML = `<div class="text-center text-slate-400 p-4"><i class="fa-solid fa-cards-blank text-4xl mb-2 block"></i>Upload files and click "Generate"</div>`;
+                document.getElementById('flashcard-controls').classList.add('hidden');
+                document.getElementById('mindmap-content').innerHTML = `<div class="text-center text-slate-400 mt-10"><i class="fa-solid fa-bezier-curve text-4xl mb-2 block"></i>Visualize relationships</div>`;
+                showToast("All files cleared.", "success");
+            }
+        });
+
+        function updateContextData() { contextData = Object.entries(filesStorage).map(([name, text]) => `\n\n--- FILE: ${name} ---\n${text}`).join(''); }
+
+        async function handleFiles(files) {
+            uploadSpinner.classList.remove('hidden');
+            let successCount = 0;
+            for (const file of files) {
+                try {
+                    if (filesStorage[file.name]) continue; 
+                    let text = "";
+                    if (file.type === "application/pdf" || file.name.endsWith(".pdf")) {
+                        if (!isPdfLibReady) { showToast("PDF Engine initializing...", "error"); continue; }
+                        text = await extractPdfText(file);
+                    } else { text = await readFileAsText(file); }
+                    filesStorage[file.name] = text;
+                    updateContextData();
+                    addFileToSidebar(file.name, file.size);
+                    successCount++;
+                } catch (error) { console.error(error); showToast(`Error reading ${file.name}`, "error"); }
+            }
+            uploadSpinner.classList.add('hidden');
+            fileInput.value = ''; 
+            if(successCount > 0) showToast(`${successCount} file(s) added successfully.`, "success");
+        }
+
+        function readFileAsText(file) { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = (e) => resolve(e.target.result); reader.onerror = (e) => reject(e); reader.readAsText(file); }); }
+
+        async function extractPdfText(file) {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            let fullText = "";
+            const maxPages = Math.min(pdf.numPages, 30); 
+            for (let i = 1; i <= maxPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                fullText += textContent.items.map(item => item.str).join(' ') + "\n";
+            }
+            return fullText;
+        }
+
+        function addFileToSidebar(name, size) {
+            const es = document.getElementById('empty-state');
+            if (es) es.style.display = 'none';
+            fileCount++;
+            docCountLabel.innerText = `${fileCount} Files`;
+            const div = document.createElement('div');
+            div.className = "bg-slate-800 p-3 rounded-lg border border-slate-700 flex items-center gap-3 animate-pulse-once group hover:border-slate-600 transition-all";
+            div.style.animation = "fadeIn 0.5s ease-out";
+            div.innerHTML = `<div class="w-8 h-8 rounded bg-slate-700 flex items-center justify-center flex-shrink-0"><i class="fa-solid ${name.endsWith('.pdf') ? 'fa-file-pdf text-red-400' : 'fa-file-lines text-blue-400'}"></i></div><div class="min-w-0 flex-1"><p class="text-xs font-medium text-slate-200 truncate" title="${name}">${name}</p><p class="text-[10px] text-slate-500">${(size/1024).toFixed(1)} KB</p></div><div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"><button onclick="triggerSummary('${name}')" class="text-slate-400 hover:text-indigo-400 p-1.5 rounded hover:bg-slate-700 transition-colors"><i class="fa-solid fa-wand-magic-sparkles"></i></button><button onclick="deleteFile('${name}', this.parentElement.parentElement)" class="text-slate-400 hover:text-red-400 p-1.5 rounded hover:bg-slate-700 transition-colors"><i class="fa-solid fa-trash-can"></i></button></div>`;
+            fileList.appendChild(div);
+        }
+
+        async function deleteFile(name, element) {
+            if (await customConfirm(`Remove "${name}"?`)) {
+                delete filesStorage[name]; updateContextData(); element.remove(); fileCount--; docCountLabel.innerText = `${fileCount} Files`;
+                if (fileCount === 0) document.getElementById('empty-state').style.display = 'block';
+                showToast("File removed.", "success");
+            }
+        }
+
+        // --- CHAT & HISTORY LOGIC ---
+
+        function startNewChat() {
+            // 1. Reset State
+            currentSessionId = Date.now();
+            currentSessionMessages = [];
+            
+            // 2. Reset UI
+            document.getElementById('chat-container').innerHTML = `<div class="flex gap-4 max-w-3xl mx-auto fade-in"><div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 text-blue-600 shadow-sm border border-blue-200"><i class="fa-solid fa-robot text-sm"></i></div><div class="bg-white border border-slate-200 p-4 rounded-2xl rounded-tl-none shadow-sm text-slate-700 text-sm leading-relaxed">Hello. I am your <b>Strict Study Assistant</b>. <br><br>I am designed to provide study materials, notes, and educational explanations ONLY. I do not engage in casual conversation, greetings, or off-topic discussions. <br><br><span class="text-xs text-slate-400"><i class="fa-solid fa-circle-info"></i> Conversation reset. Knowledge base is still active.</span></div></div>`;
+            
+            showToast("Chat reset.", "info");
+        }
+
+        function saveCurrentSession() {
+            if (currentSessionMessages.length === 0) return;
+
+            // Check if session exists in history
+            const existingIndex = chatHistory.findIndex(h => h.id === currentSessionId);
+            
+            const sessionData = {
+                id: currentSessionId,
+                title: currentSessionMessages[0].text.substring(0, 40) + "...",
+                date: new Date().toISOString(),
+                messages: currentSessionMessages
+            };
+
+            if (existingIndex > -1) {
+                chatHistory[existingIndex] = sessionData;
+            } else {
+                chatHistory.unshift(sessionData); // Add to top
+            }
+            
+            localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+        }
+
+        function openHistoryModal() {
+            const list = document.getElementById('history-list');
+            list.innerHTML = '';
+            
+            if (chatHistory.length === 0) {
+                list.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-slate-400 gap-2"><i class="fa-solid fa-clock-rotate-left text-2xl"></i><span class="text-sm">No history yet</span></div>`;
+            } else {
+                chatHistory.forEach(session => {
+                    const date = new Date(session.date).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+                    const item = document.createElement('div');
+                    item.className = "p-3 rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-blue-50 cursor-pointer transition-all group bg-white";
+                    item.innerHTML = `
+                        <div class="flex justify-between items-start mb-1">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">${date}</span>
+                            <button onclick="event.stopPropagation(); deleteSession(${session.id})" class="text-slate-300 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                        <p class="text-sm font-medium text-slate-700 truncate">${session.title}</p>
+                        <p class="text-xs text-slate-500 mt-1 truncate">${session.messages.length} messages</p>
+                    `;
+                    item.onclick = () => loadSession(session.id);
+                    list.appendChild(item);
+                });
+            }
+            document.getElementById('history-modal').classList.remove('hidden');
+        }
+
+        function closeHistoryModal() {
+            document.getElementById('history-modal').classList.add('hidden');
+        }
+
+        function loadSession(id) {
+            const session = chatHistory.find(h => h.id === id);
+            if (!session) return;
+
+            currentSessionId = session.id;
+            currentSessionMessages = [...session.messages]; // Clone it
+
+            chatContainer.innerHTML = '';
+            // Add initial welcome back message
+            chatContainer.innerHTML = `<div class="flex gap-4 max-w-3xl mx-auto fade-in"><div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 text-blue-600 shadow-sm border border-blue-200"><i class="fa-solid fa-robot text-sm"></i></div><div class="bg-white border border-slate-200 p-4 rounded-2xl rounded-tl-none shadow-sm text-slate-700 text-sm leading-relaxed">Hello. I am your <b>Strict Study Assistant</b>.<br><br><span class="text-xs text-slate-400"><i class="fa-solid fa-rotate-left"></i> Restored past conversation.</span></div></div>`;
+
+            session.messages.forEach(msg => {
+                addMessage(msg.role, msg.text, true); // true = don't save again
+            });
+
+            closeHistoryModal();
+            showToast("Chat restored.", "success");
+        }
+
+        async function deleteSession(id) {
+            if(await customConfirm("Delete this chat?")) {
+                chatHistory = chatHistory.filter(h => h.id !== id);
+                localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+                openHistoryModal(); // Refresh list
+                if (currentSessionId === id) startNewChat();
+            }
+        }
+
+        async function clearChatHistory() {
+            if (chatHistory.length === 0) return;
+            if (await customConfirm("Delete ALL chat history?")) {
+                chatHistory = [];
+                localStorage.removeItem('chatHistory');
+                openHistoryModal();
+                showToast("History cleared.", "success");
+            }
+        }
+
+        async function handleChat(text) {
+            const systemPrompt = `
+                You are a specialized Study Assistant Bot. 
+                CRITICAL RULE: You function ONLY to generate study materials, notes, summaries, quizzes, and educational explanations.
+                
+                STRICT GUIDELINES:
+                1. CONTEXT FIRST: Use the provided FILE CONTEXT to answer.
+                2. EDUCATIONAL ONLY: If the answer is not in the file, use general academic knowledge ONLY if the question is strictly educational (e.g., "Explain calculus").
+                3. ZERO CHIT-CHAT: Do not engage in casual conversation, greetings ("Hi", "How are you"), jokes, or personal questions. 
+                4. REFUSAL PROTOCOL: If a user asks anything unrelated to studying (e.g., "Tell me a joke", "What is the weather?", "Write a poem about cats", "Hello"), you must reply EXACTLY with: "I am designed to provide study materials only. Please ask an educational question."
+                5. FORMATTING: Use bolding, bullet points, and clear headers for study notes.
+                
+                CONTEXT: 
+                ${contextData || "No files uploaded."}
+            `;
+            return await callGeminiAPI(systemPrompt, text);
+        }
+
+        async function callGeminiAPI(sys, query) {
+            try {
+                const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: query }] }],
+                        systemInstruction: { parts: [{ text: sys }] }
+                    })
+                });
+                if (!response.ok) throw new Error("API Error");
+                const data = await response.json();
+                return data.candidates?.[0]?.content?.parts?.[0]?.text || "No response.";
+            } catch (e) {
+                return "Error: Could not connect to Gemini. Check your API Key.";
+            }
+        }
+
+        function addMessage(role, text, isHistoryLoad = false) {
+            const div = document.createElement('div');
+            div.className = "flex gap-4 max-w-3xl mx-auto fade-in";
+            const isUser = role === 'user';
+            const icon = isUser ? `<div class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center flex-shrink-0 text-white"><i class="fa-solid fa-user text-xs"></i></div>` : `<div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-robot text-xs"></i></div>`;
+            const bg = isUser ? "bg-slate-800 text-white rounded-tr-none" : "bg-white border border-slate-200 text-slate-700 rounded-tl-none";
+            div.innerHTML = `${isUser ? '' : icon}<div class="${bg} p-4 rounded-2xl shadow-sm text-sm leading-relaxed overflow-hidden prose prose-sm max-w-none ${isUser ? 'prose-invert' : ''}">${marked.parse(text)}</div>${isUser ? icon : ''}`;
+            if (isUser) div.classList.add('justify-end');
+            chatContainer.appendChild(div);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+
+            if (!isHistoryLoad) {
+                currentSessionMessages.push({ role, text, timestamp: Date.now() });
+                saveCurrentSession();
+            }
+        }
+
+        function addLoadingIndicator() {
+            const div = document.createElement('div');
+            div.id = "loader";
+            div.className = "flex gap-4 max-w-3xl mx-auto fade-in";
+            div.innerHTML = `<div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center"><i class="fa-solid fa-robot text-xs"></i></div><div class="bg-white border border-slate-200 p-4 rounded-2xl rounded-tl-none shadow-sm flex gap-1"><div class="w-2 h-2 bg-slate-400 rounded-full typing-dot"></div><div class="w-2 h-2 bg-slate-400 rounded-full typing-dot"></div><div class="w-2 h-2 bg-slate-400 rounded-full typing-dot"></div></div>`;
+            chatContainer.appendChild(div);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function removeLoader() { const l = document.getElementById('loader'); if (l) l.remove(); }
+
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const text = userInput.value.trim();
+            if (!text) return;
+            addMessage('user', text);
+            userInput.value = '';
+            addLoadingIndicator();
+            const res = await handleChat(text);
+            removeLoader();
+            addMessage('assistant', res);
+        });
+
+        async function triggerSummary(name) {
+            if(!filesStorage[name]) return;
+            addMessage('user', `Summarize ${name}`);
+            addLoadingIndicator();
+            const res = await callGeminiAPI("Summarize in 3 bullets.", filesStorage[name].substring(0,30000));
+            removeLoader();
+            addMessage('assistant', `**Summary:**\n${res}`);
+        }
+
+        async function triggerQuiz() {
+            if(!contextData) return showToast("Upload files first!", "error");
+            addMessage('user', "Quiz Me");
+            addLoadingIndicator();
+            const res = await callGeminiAPI("Create 3 multiple choice questions based on context.", `Context: ${contextData.substring(0,50000)}`);
+            removeLoader();
+            addMessage('assistant', res);
+        }
+
+        async function triggerSuggest() {
+            if(!contextData) return showToast("Upload files first!", "error");
+            addMessage('user', "Suggest Questions");
+            addLoadingIndicator();
+            const res = await callGeminiAPI("Suggest 3 questions.", `Context: ${contextData.substring(0,30000)}`);
+            removeLoader();
+            addMessage('assistant', res);
+        }
+
+        // --- SCHEDULE ---
+        const navChat = document.getElementById('nav-chat');
+        const navSchedule = document.getElementById('nav-schedule');
+        const navTools = document.getElementById('nav-tools');
+        const viewChat = document.getElementById('view-chat');
+        const viewSchedule = document.getElementById('view-schedule');
+        const viewTools = document.getElementById('view-tools');
+        const sidebarUpload = document.getElementById('sidebar-upload-section');
+        const sidebarFileList = document.getElementById('sidebar-file-list');
+
+        window.switchTab = function(tab) {
+            // Reset styles
+            [navChat, navSchedule, navTools].forEach(btn => {
+                btn.classList.remove('bg-blue-600', 'text-white');
+                btn.classList.add('bg-slate-800', 'text-slate-400');
+            });
+            [viewChat, viewSchedule, viewTools].forEach(v => v.classList.add('hidden'));
+            
+            // Show sidebar content everywhere (Chat, Schedule, Tools)
+            sidebarUpload.classList.remove('hidden'); 
+            sidebarFileList.classList.remove('hidden');
+
+            if (tab === 'chat') {
+                viewChat.classList.remove('hidden');
+                navChat.classList.add('bg-blue-600', 'text-white'); navChat.classList.remove('bg-slate-800', 'text-slate-400');
+            } else if (tab === 'schedule') {
+                viewSchedule.classList.remove('hidden');
+                navSchedule.classList.add('bg-blue-600', 'text-white'); navSchedule.classList.remove('bg-slate-800', 'text-slate-400');
+            } else if (tab === 'tools') {
+                viewTools.classList.remove('hidden');
+                navTools.classList.add('bg-blue-600', 'text-white'); navTools.classList.remove('bg-slate-800', 'text-slate-400');
+            }
+            if (window.innerWidth < 768) document.getElementById('sidebar').classList.add('-translate-x-full');
+        };
+
+        // --- SCHEDULE LOGIC ---
+        const currentDateLabel = document.getElementById('current-date');
+        const scheduleForm = document.getElementById('schedule-form');
+        const eventsContainer = document.getElementById('events-container');
+        currentDateLabel.innerText = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+
+        function renderEvents() {
+            // Sort by Date only
+            events.sort((a, b) => {
+                const dtA = new Date(a.date);
+                const dtB = new Date(b.date);
+                return dtA - dtB;
+            });
+
+            const list = document.getElementById('events-container');
+            list.innerHTML = '';
+            
+            if (events.length === 0) {
+                list.innerHTML = `<div class="text-center py-12 bg-white rounded-2xl border border-slate-200 border-dashed"><i class="fa-regular fa-calendar-xmark text-3xl text-slate-300 mb-3 block"></i><p class="text-slate-500 font-medium">No events scheduled.</p></div>`;
+                return;
+            }
+
+            events.forEach(ev => {
+                // Robust Date Parsing (YYYY-MM-DD -> Local Date)
+                const parts = ev.date.split('-');
+                const year = parseInt(parts[0], 10);
+                const month = parseInt(parts[1], 10) - 1; // JS months are 0-11
+                const day = parseInt(parts[2], 10);
+                const d = new Date(year, month, day); 
+
+                let color = "bg-blue-100 text-blue-700";
+                let icon = "fa-book";
+                if (ev.type === 'Exam') { color = "bg-red-100 text-red-700"; icon = "fa-triangle-exclamation"; }
+                if (ev.type === 'Assignment') { color = "bg-yellow-100 text-yellow-700"; icon = "fa-file-pen"; }
+                
+                const el = document.createElement('div');
+                el.className = "bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex gap-4 items-start group";
+                el.innerHTML = `
+                    <div class="text-center bg-slate-50 p-2 rounded-lg border border-slate-100 min-w-[60px]">
+                        <div class="text-xs font-bold text-slate-500 uppercase">${d.toLocaleString('default', {month:'short'})}</div>
+                        <div class="text-xl font-bold text-slate-800">${day}</div>
+                    </div>
+                    <div class="flex-1">
+                        <div class="flex justify-between items-start">
+                            <h4 class="font-bold text-slate-800">${ev.title}</h4>
+                            <span class="text-[10px] font-bold px-2 py-1 rounded-full uppercase flex items-center gap-1 ${color}"><i class="fa-solid ${icon}"></i> ${ev.type}</span>
+                        </div>
+                        <div class="flex gap-3 mt-2 text-xs text-slate-500">
+                            <span>${d.toLocaleDateString('en-US', {weekday:'long'})}</span>
+                        </div>
+                    </div>
+                    <button onclick="deleteEvent(${ev.id})" class="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 transition-all"><i class="fa-solid fa-trash"></i></button>
+                `;
+                list.appendChild(el);
+            });
+        }
+
+        scheduleForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const newEvent = {
+                id: Date.now(),
+                title: document.getElementById('event-title').value,
+                date: document.getElementById('event-date').value,
+                type: document.getElementById('event-type').value
+            };
+            events.push(newEvent);
+            localStorage.setItem("events", JSON.stringify(events));
+            renderEvents();
+            scheduleForm.reset();
+            showToast("Event added!", "success");
+        });
+
+        window.deleteEvent = async (id) => {
+            if (await customConfirm("Delete event?")) {
+                events = events.filter(e => e.id !== id);
+                localStorage.setItem("events", JSON.stringify(events));
+                renderEvents();
+                showToast("Event deleted.", "info");
+            }
+        };
+
+        // --- STUDY TOOLS LOGIC ---
+        
+        // 1. Flashcards
+        async function generateFlashcards() {
+            if (!contextData) return showToast("Upload files first!", "error");
+            
+            const btn = document.getElementById('gen-flash-btn');
+            btn.innerText = "Generating...";
+            btn.disabled = true;
+            
+            try {
+                const prompt = `Create 5 study flashcards based on the provided context. Return ONLY a raw JSON array of objects with "front" (question) and "back" (answer) keys. Do not use Markdown formatting. Context: ${contextData.substring(0, 20000)}`;
+                const response = await callGeminiAPI(prompt, "Generate JSON.");
+                let cleanJson = response.replace(/```json/g, '').replace(/```/g, '').trim();
+                flashcards = JSON.parse(cleanJson);
+                
+                if (flashcards.length > 0) {
+                    currentCardIndex = 0;
+                    renderCurrentCard();
+                    document.getElementById('flashcard-controls').classList.remove('hidden');
+                    showToast("Flashcards generated!", "success");
+                } else { showToast("Failed to generate cards.", "error"); }
+            } catch (e) { console.error(e); showToast("Error generating flashcards.", "error"); }
+            btn.innerText = "Generate from Files";
+            btn.disabled = false;
+        }
+
+        function renderCurrentCard() {
+            const container = document.getElementById('flashcard-container');
+            const card = flashcards[currentCardIndex];
+            const total = flashcards.length;
+            document.getElementById('card-counter').innerText = `${currentCardIndex + 1} / ${total}`;
+            container.innerHTML = `
+                <div class="relative w-full h-full cursor-pointer perspective-1000 group" onclick="this.firstElementChild.classList.toggle('rotate-y-180')">
+                    <div class="relative w-full h-full duration-500 transform-style-3d transition-all">
+                        <div class="absolute inset-0 w-full h-full bg-white rounded-xl shadow-sm border border-slate-200 flex items-center justify-center p-8 text-center backface-hidden"><div><span class="text-xs font-bold text-blue-500 uppercase mb-2 block">Question</span><p class="text-lg font-medium text-slate-800">${card.front}</p><span class="text-[10px] text-slate-400 absolute bottom-4 left-0 right-0">Click to flip</span></div></div>
+                        <div class="absolute inset-0 w-full h-full bg-blue-600 rounded-xl shadow-sm flex items-center justify-center p-8 text-center backface-hidden rotate-y-180"><div><span class="text-xs font-bold text-blue-200 uppercase mb-2 block">Answer</span><p class="text-lg font-medium text-white">${card.back}</p></div></div>
+                    </div>
+                </div>`;
+        }
+
+        window.nextCard = () => { if (currentCardIndex < flashcards.length - 1) { currentCardIndex++; renderCurrentCard(); } };
+        window.prevCard = () => { if (currentCardIndex > 0) { currentCardIndex--; renderCurrentCard(); } };
+
+        // 2. Timer Logic
+        function formatTime(seconds) {
+            const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+            const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+            const s = (seconds % 60).toString().padStart(2, '0');
+            return `${h}:${m}:${s}`;
+        }
+        function updateTimerDisplay() { 
+            const display = document.getElementById('timer-display');
+            display.innerText = formatTime(timeLeft);
+        }
+
+        // Beep Logic - Enhanced to a "Ding"
+        function playBeep() {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) return; 
+            
+            const ctx = new AudioContext();
+            
+            // Create oscillators for a richer sound
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            
+            // "Ding" settings
+            osc.frequency.setValueAtTime(880, ctx.currentTime); // High pitch (A5)
+            osc.type = "sine"; 
+            
+            // Exponential decay envelope
+            const now = ctx.currentTime;
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 1.5);
+            
+            osc.start(now);
+            osc.stop(now + 1.5);
+            
+            // Cleanup
+            setTimeout(() => { ctx.close(); }, 1600);
+        }
+
+        window.adjustTime = (seconds) => {
+            // Only allow adjustment if timer is paused/stopped
+            if (isTimerRunning) return;
+            timeLeft += seconds;
+            if (timeLeft < 60) timeLeft = 60; // Minimum 1 minute
+            updateTimerDisplay();
+        };
+
+        window.editTimer = () => {
+            if (isTimerRunning) return;
+            const display = document.getElementById('timer-display');
+            const input = document.getElementById('manual-timer-input');
+            
+            // Set input value to current minutes
+            input.value = Math.floor(timeLeft / 60);
+            
+            // Swap display with input
+            display.classList.add('hidden');
+            input.classList.remove('hidden');
+            input.focus();
+        };
+
+        window.saveManualTime = () => {
+            const display = document.getElementById('timer-display');
+            const input = document.getElementById('manual-timer-input');
+            
+            const timeStr = input.value.trim();
+            const parts = timeStr.split(':').map(part => parseInt(part) || 0);
+            
+            let seconds = 0;
+            if (parts.length === 3) {
+                // HH:MM:SS
+                seconds = (parts[0] * 3600) + (parts[1] * 60) + parts[2];
+            } else if (parts.length === 2) {
+                // HH:MM
+                seconds = (parts[0] * 3600) + (parts[1] * 60);
+            } else if (parts.length === 1) {
+                // Hours
+                seconds = parts[0] * 3600;
+            }
+            
+            // Fallback
+            if (seconds <= 0) seconds = 25 * 60;
+            
+            timeLeft = seconds;
+            updateTimerDisplay();
+            
+            // Swap input back to display
+            input.classList.add('hidden');
+            display.classList.remove('hidden');
+        };
+
+        window.startTimer = () => {
+            if (isTimerRunning) {
+                clearInterval(timerInterval); isTimerRunning = false;
+                document.getElementById('start-btn').innerText = "Start";
+                document.getElementById('start-btn').classList.replace('bg-red-500', 'bg-slate-900');
+            } else {
+                timerInterval = setInterval(() => {
+                    if (timeLeft > 0) { 
+                        timeLeft--; 
+                        updateTimerDisplay(); 
+                    } else { 
+                        clearInterval(timerInterval); 
+                        isTimerRunning = false; 
+                        playBeep(); // Play sound
+                        // Small delay to let sound start before alert blocks UI
+                        setTimeout(() => {
+                            showToast("Timer finished!", "success"); 
+                            document.getElementById('start-btn').innerText = "Start";
+                        }, 100);
+                    }
+                }, 1000);
+                isTimerRunning = true;
+                document.getElementById('start-btn').innerText = "Pause";
+                document.getElementById('start-btn').classList.replace('bg-slate-900', 'bg-red-500');
+            }
+        };
+
+        window.resetTimer = () => {
+            clearInterval(timerInterval); isTimerRunning = false;
+            document.getElementById('start-btn').innerText = "Start";
+            document.getElementById('start-btn').classList.replace('bg-red-500', 'bg-slate-900');
+            timeLeft = 25 * 60; updateTimerDisplay();
+        };
+
+        window.setTimerMode = (mode) => {
+            clearInterval(timerInterval); isTimerRunning = false;
+            document.getElementById('start-btn').innerText = "Start";
+            document.getElementById('start-btn').classList.replace('bg-red-500', 'bg-slate-900');
+            ['focus', 'short', 'long'].forEach(m => {
+                const btn = document.getElementById(`mode-${m}`);
+                if (m === mode) { btn.classList.add('bg-white', 'text-slate-800', 'shadow-sm'); btn.classList.remove('text-slate-500'); } 
+                else { btn.classList.remove('bg-white', 'text-slate-800', 'shadow-sm'); btn.classList.add('text-slate-500'); }
+            });
+            if (mode === 'focus') timeLeft = 25 * 60;
+            if (mode === 'short') timeLeft = 5 * 60;
+            if (mode === 'long') timeLeft = 15 * 60;
+            updateTimerDisplay();
+        };
+
+        // 3. Concept Map
+        async function generateMindMap() {
+            if (!contextData) return showToast("Upload files first!", "error");
+            
+            const btn = document.getElementById('gen-map-btn');
+            const container = document.getElementById('mindmap-content'); // Target inner content div
+            btn.innerText = "Generating...";
+            btn.disabled = true;
+            
+            try {
+                const prompt = `Based on the provided text context, generate a Mermaid.js flowchart diagram code that visualizes the key concepts and relationships. 
+                Return ONLY the raw Mermaid code starting with "graph TD". Do not include markdown fences or backticks.
+                Keep it relatively simple (max 15 nodes) for readability.
+                Context: ${contextData.substring(0, 15000)}`;
+                
+                const response = await callGeminiAPI(prompt, "Generate Mermaid Code.");
+                let cleanCode = response.replace(/```mermaid/g, '').replace(/```/g, '').trim();
+                if (!cleanCode.startsWith('graph') && !cleanCode.startsWith('flowchart')) { cleanCode = 'graph TD\n' + cleanCode; }
+
+                container.innerHTML = `<div class="mermaid">${cleanCode}</div>`;
+                await mermaid.run({ nodes: container.querySelectorAll('.mermaid') });
+                
+                // Reset zoom when new map is generated
+                mapZoomLevel = 1;
+                updateMapZoom();
+                showToast("Concept map generated.", "success");
+                
+            } catch (e) {
+                console.error(e);
+                container.innerHTML = `<div class="text-red-400 text-center"><i class="fa-solid fa-circle-exclamation mb-2"></i><br>Failed to generate map.</div>`;
+                showToast("Failed to generate map.", "error");
+            }
+            btn.innerText = "Generate";
+            btn.disabled = false;
+        }
+
+        function updateMapZoom() {
+            const content = document.getElementById('mindmap-content');
+            if(content) {
+                content.style.transform = `scale(${mapZoomLevel})`;
+            }
+        }
+
+        window.zoomMap = (step) => {
+            mapZoomLevel = Math.max(0.1, Math.min(3, mapZoomLevel + step));
+            updateMapZoom();
+        };
+
+        window.resetZoomMap = () => {
+            mapZoomLevel = 1;
+            updateMapZoom();
+        };
+
+        // New Tab Map Function
+        window.openMapInNewTab = () => {
+            const source = document.getElementById('mindmap-content');
+            const svgElement = source.querySelector('svg');
+            if (!svgElement) return;
+
+            // Get raw SVG string
+            let svgData = new XMLSerializer().serializeToString(svgElement);
+            
+            // Open new window
+            const tab = window.open('about:blank', '_blank');
+            tab.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Concept Map Full View</title>
+                    <style>
+                        body { 
+                            margin: 0; 
+                            padding: 40px; 
+                            background-color: #ffffff; 
+                            display: flex; 
+                            justify-content: center;
+                            min-height: 100vh;
+                        }
+                        /* Ensure SVG is large and readable */
+                        svg { 
+                            width: auto; 
+                            height: auto; 
+                            min-width: 80%; 
+                            max-width: 95%;
+                            background: white;
+                            padding: 20px;
+                            border-radius: 12px;
+                            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+                        }
+                    </style>
+                </head>
+                <body>
+                    ${svgData}
+                </body>
+                </html>
+            `);
+            tab.document.close();
+        };
+
+        // 4. Quick Notes
+        const notesArea = document.getElementById('quick-notes');
+        notesArea.value = localStorage.getItem('quick_notes') || "";
+        notesArea.addEventListener('input', () => { localStorage.setItem('quick_notes', notesArea.value); });
+
+        document.getElementById('toggle-sidebar').addEventListener('click', () => {
+            const s = document.getElementById('sidebar');
+            if (s.classList.contains('-translate-x-full')) { s.classList.remove('-translate-x-full'); s.classList.add('absolute', 'inset-y-0', 'left-0'); } 
+            else { s.classList.add('-translate-x-full'); }
+        });
+        
+        function toggleSettings() {
+            showToast("API Key is managed by the application.", "info");
+        }
+        
+        renderEvents();
+    </script>
+</body>
+</html>
